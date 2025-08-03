@@ -1,6 +1,7 @@
 import datetime
 import os.path
 import pytz  # Library for timezone handling
+import csv  # Import the csv module
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -109,49 +110,72 @@ def create_calendar_event(
         print(f"Client '{client_email}' successfully invited.")
 
     except HttpError as error:
-        print(f"An HTTP error occurred: {error}")
+        print(f"An HTTP error occurred for client {client_email}: {error}")
         print("Please ensure the client email is valid and you have granted the necessary permissions.")
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        print(f"An unexpected error occurred for client {client_email}: {e}")
 
 def main():
     """
-    Main function to run the scheduling application.
+    Main function to run the scheduling application. Reads event details from a CSV file.
     """
     creds = authenticate_google_calendar()
     service = build("calendar", "v3", credentials=creds)
 
     print("\n--- Google Calendar Client Scheduler ---")
-    print("Enter event details. Type 'done' for client email to quit.")
 
-    while True:
-        client_email = input("\nEnter client email (type 'done' to quit): ").strip()
-        if client_email.lower() == 'done':
-            break
+    csv_file_path = input("Enter the path to your CSV file containing event details: ").strip()
 
-        event_summary = input("Enter event summary (e.g., 'Consultation with [Client Name]'): ").strip()
-        event_description = input("Enter event description (e.g., 'Discuss project proposal'): ").strip()
+    if not os.path.exists(csv_file_path):
+        print(f"Error: CSV file not found at '{csv_file_path}'. Please check the path and try again.")
+        return
 
-        # Example: 2025-07-31 10:00
-        start_datetime_str = input("Enter start date and time (YYYY-MM-DD HH:MM, e.g., 2025-08-15 14:00): ").strip()
-        end_datetime_str = input("Enter end date and time (YYYY-MM-DD HH:MM, e.g., 2025-08-15 15:00): ").strip()
+    try:
+        with open(csv_file_path, mode='r', encoding='utf-8') as file:
+            reader = csv.reader(file)
+            header = next(reader)  # Read the header row
 
-        # IMPORTANT: Set your local timezone here.
-        # Valid timezones can be found at https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-        # Examples: "America/New_York", "Europe/London", "Asia/Tokyo", "Asia/Kolkata", "Asia/Jerusalem"
-        event_timezone = input("Enter event timezone (default: Asia/Jerusalem): ").strip()
-        if not event_timezone:
-            event_timezone = "Asia/Jerusalem"  # Default to Jerusalem if not provided
+            # Find the indices of the columns based on their headers
+            try:
+                client_email_idx = header.index("Client Email")
+                summary_idx = header.index("Summary")
+                description_idx = header.index("Description")
+                start_time_idx = header.index("Start Time")
+                end_time_idx = header.index("End Time")
+                timezone_idx = header.index("Timezone")
+            except ValueError as e:
+                print(f"Error: Missing expected column in CSV. Please ensure your CSV has 'Client Email', 'Summary', 'Description', 'Start Time', 'End Time', and 'Timezone' columns. Missing: {e}")
+                return
 
-        create_calendar_event(
-            service,
-            client_email,
-            event_summary,
-            event_description,
-            start_datetime_str,
-            end_datetime_str,
-            event_timezone
-        )
+            print("\nProcessing events from CSV...")
+            for i, row in enumerate(reader):
+                if not row:  # Skip empty rows
+                    continue
+                try:
+                    client_email = row[client_email_idx].strip()
+                    event_summary = row[summary_idx].strip()
+                    event_description = row[description_idx].strip()
+                    start_datetime_str = row[start_time_idx].strip()
+                    end_datetime_str = row[end_time_idx].strip()
+                    event_timezone = row[timezone_idx].strip() if row[timezone_idx].strip() else "Asia/Jerusalem" # Default if empty in CSV
+
+                    print(f"\nAttempting to create event for: {client_email}")
+                    create_calendar_event(
+                        service,
+                        client_email,
+                        event_summary,
+                        event_description,
+                        start_datetime_str,
+                        end_datetime_str,
+                        event_timezone
+                    )
+                except IndexError:
+                    print(f"Skipping row {i+2}: Not enough columns or malformed row.")
+                except Exception as e:
+                    print(f"Error processing row {i+2} for client {row[client_email_idx] if len(row) > client_email_idx else 'N/A'}: {e}")
+
+    except Exception as e:
+        print(f"An error occurred while reading the CSV file: {e}")
 
     print("\nEvent creation complete. Exiting.")
 
