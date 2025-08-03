@@ -17,7 +17,7 @@ git clone <repository-url>
 cd <repository-name>
 ```
 
-Otherwise, navigate to the directory containing your Python script (`schedule_from_csv.py`) and your `credentials.json` file.
+Otherwise, navigate to the directory containing your Python script (`schedule_client_event.py`) and your `credentials.json` file.
 
 ### 2\. Create a Virtual Environment
 
@@ -105,7 +105,7 @@ client4@example.com,Quick Sync,Check-in on design mockups,2025-08-13 16:00,2025-
 Once your virtual environment is active, your dependencies are installed, and your `credentials.json` and CSV file are ready, run the script:
 
 ```bash
-python schedule_from_csv.py
+python schedule_client_event.py
 ```
 
 The script will prompt you to enter the path to your CSV file (e.g., `events.csv`). It will then process each row, creating a Google Calendar event and inviting the specified client.
