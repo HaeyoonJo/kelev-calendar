@@ -1,0 +1,21 @@
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Python virtual environment
+venv/
+env/
+.env/
+.venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Credentials and tokens
+credentials.json
+token.json
